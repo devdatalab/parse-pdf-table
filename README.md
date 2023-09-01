@@ -1,4 +1,9 @@
 # data_scraper
+
+### The big idea
+
+We start with a PDF with some embedded tables, where the text has already been processed by OCR, such tath 
+
 ### Transforming digitized text into meaningful data.
 [Data Scraper Tech Talk Slides](https://docs.google.com/presentation/d/1sxa5Hi2GYrx1_uY6n696TyaZOA0UDpOAjR0OnclJq70/edit#slide=id.p)
 
