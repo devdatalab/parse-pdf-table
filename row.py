@@ -2,23 +2,24 @@ import pandas as pd
 import numpy as np
 import pdb
 
-
-# maybe the issue is I have to sort by left to right before applying bayes
-
 # check if all characters of cell are digits
 def contains_number(item):
     item = str(item)
     return item.isdigit()
-  
+
+# check if item is not a number
 def is_nan(item):
     item = str(item)
     return item == "nan"
 
-
+# given a dataframe of words and coordinates, assign each word to a row number
 def rowDetection(df, df_row_input, page_type):
+
+    # initialize some values we will use later
     perc_num = 0
     max_num = 0
     max_col = 0
+    
     # ------------------------------------------------------------------- #
     # get the row key: in this case the first column which is 90% numbers #
     # ------------------------------------------------------------------- #
@@ -80,9 +81,9 @@ def rowDetection(df, df_row_input, page_type):
         rdf.at[rowind[0], 'rowarray'] = np.arange(np.round(rdf.loc[rowind[0], "y0"]), np.round(rdf.loc[rowind[0], "y1"]+1))
         return rdf
     
-    # ------------- #
-    # 6 Assign rows #
-    # ------------- #
+    # ----------- #
+    # Assign rows #
+    # ----------- #
     def match_to_row(row, rdf, theta, count):
         """
         Compare the y coords for each piece of text data
