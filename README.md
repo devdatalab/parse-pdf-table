@@ -4,6 +4,21 @@
 
 We start with a PDF with some embedded tables, where the text has already been processed by OCR, such tath 
 
+## Quick start
+
+Create a conda environment from the included config file:
+```
+conda env create -f parse-pdf-table.yml
+conda activate parse-pdf-table
+```
+
+Create the output folder and run `main.py` on the test PDF
+```
+mkdir newCensus_output
+python main.py one.pdf True 483 AHM
+```
+
+
 ### Transforming digitized text into meaningful data.
 [Data Scraper Tech Talk Slides](https://docs.google.com/presentation/d/1sxa5Hi2GYrx1_uY6n696TyaZOA0UDpOAjR0OnclJq70/edit#slide=id.p)
 
