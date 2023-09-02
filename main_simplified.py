@@ -24,7 +24,7 @@ page = doc[doc_num]
 words = page.get_text("words")
 
 # ------------------------------------------------------------------ #
-# 2 Layout Detection: (Tool: ML Object Detection - Layout Parser) #
+# 2 Layout Detection: (Tool: ML Object Detection - Layout Parser)    #
 # ------------------------------------------------------------------ #
 
 # set the options for LayoutParser, if we are using it
@@ -64,6 +64,8 @@ df_words = df_words.rename(columns=dict(enumerate(column_names)))
 
 # set the agglomerative clustering options
 col_detect_options = {'dist_thresh': 50, 'linkage_type': 'average'}
+
+# possible additional parameters: target column count?
 
 # Run column detection function. 
 # This should run on df_words, which limits it to the inside of the table_coords bounding box
