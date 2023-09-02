@@ -14,7 +14,7 @@ def is_nan(item):
 
 # given a dataframe of words and coordinates, assign each word to a row number
 def rowDetection(df, df_row_input, page_type):
-
+    print(page_type)
     # initialize some values we will use later
     perc_num = 0
     max_num = 0

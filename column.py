@@ -11,11 +11,11 @@ def columnDetection(df, dist_thresh, linkage_type):
     # create the column dataframe which will be returned after column assignment
     # note the input dataframe has x0,x1, while the output only has x1, since x values
     # will be snapped to columns.
-    col_df = df[['x1', 'y0', 'y1', 'text']].copy()
-    col_df['col'] = None
+    df_col = df[['x1', 'y0', 'y1', 'text']].copy()
+    df_col['col'] = None
 
     # select the x coordinates from the df and convert them to correct format for HAC
-    xCoords = col_df.apply(lambda x: (x['x1'], 0), axis=1)
+    xCoords = df_col.apply(lambda x: (x['x1'], 0), axis=1)
     xCoords = xCoords.values.tolist()
     
     # apply hierarchical agglomerative clustering to the coordinates
@@ -41,8 +41,8 @@ def columnDetection(df, dist_thresh, linkage_type):
         if len(indexes) > min_cluster_size:
             
             # compute the average x-coordinate value of the cluster
-            # PN: WHY IS THIS df AND NOT COL_DF? (COL_DF CRASHES)
-            pdb.set_trace()
+            # note we use the original df here, not df_col, because df_col
+            # does not have x0 --- df_col only has a single "snapped" x value.
             avg = np.average([df.loc[indexes,'x0']])
 
             # update the cluster list with the current label and the average x value
@@ -59,11 +59,11 @@ def columnDetection(df, dist_thresh, linkage_type):
         indexes = np.where(clustering.labels_ == label)[0]
 
         # add this column number to the df, and increment
-        col_df.loc[indexes, 'col'] = col_num
+        df_col.loc[indexes, 'col'] = col_num
         col_num = col_num + 1
         
     # replace NaN values with empty strings
     df.fillna("", inplace=True)
 
     # return a dataframe with text, coordinates (with column-snapped x values), and column numbers
-    return col_df
+    return df_col
