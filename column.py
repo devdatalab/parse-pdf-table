@@ -7,52 +7,63 @@ import pdb
 # given a dataframe from ocr'd text and AC parameters, assign each piece of text a column using HAC
 # return a dataframe with x0, y0, and column information
 def columnDetection(df, dist_thresh, linkage_type):
-    #pdb.set_trace()
+
     # create the column dataframe which will be returned after column assignment
-    col_df = df[['x1', 'y0', 'y1', 'text']]
+    # note the input dataframe has x0,x1, while the output only has x1, since x values
+    # will be snapped to columns.
+    col_df = df[['x1', 'y0', 'y1', 'text']].copy()
     col_df['col'] = None
+
     # select the x coordinates from the df and convert them to correct format for HAC
     xCoords = col_df.apply(lambda x: (x['x1'], 0), axis=1)
     xCoords = xCoords.values.tolist()
+    
     # apply hierarchical agglomerative clustering to the coordinates
     clustering = AgglomerativeClustering(
-        n_clusters=None,
-        affinity="manhattan", # manhattan
-        linkage=linkage_type,
-        distance_threshold=dist_thresh)
+        n_clusters = None,
+        affinity = "manhattan", # manhattan
+        linkage = linkage_type,
+        distance_threshold = dist_thresh)
     clustering.fit(xCoords)
     
-    
     # initialize our list of sorted clusters
-    sortedClusters = []
+    sorted_clusters = []
     min_cluster_size = 2
+    
     # loop over all clusters
-    for l in np.unique(clustering.labels_):
+    for label in np.unique(clustering.labels_):
+        
         # extract the indexes for the coordinates belonging to the
         # current cluster
-        idxs = np.where(clustering.labels_ == l)[0]
+        indexes = np.where(clustering.labels_ == label)[0]
+        
         # verify that the cluster is sufficiently large
-        if len(idxs) > min_cluster_size:
-            # compute the average x-coordinate value of the cluster and
-            # update our clusters list with the current label and the
-            # average x-coordinate
-            avg = np.average([df.loc[idxs,'x0']])
-            sortedClusters.append((l, avg))
-    # sort the clusters by their average x-coordinate and initialize our
-    # data frame
-    sortedClusters.sort(key=lambda x: x[1])
+        if len(indexes) > min_cluster_size:
+            
+            # compute the average x-coordinate value of the cluster
+            # PN: WHY IS THIS df AND NOT COL_DF? (COL_DF CRASHES)
+            pdb.set_trace()
+            avg = np.average([df.loc[indexes,'x0']])
 
+            # update the cluster list with the current label and the average x value
+            sorted_clusters.append((label, avg))
+            
+    # sort the clusters by their average x-coordinate
+    sorted_clusters.sort(key = lambda x: x[1])
+
+    # loop over the clusters again, this time in sorted order, to add column numbers
     col_num = 0
-    # loop over the clusters again, this time in sorted order
-    for (l, _) in sortedClusters:
-        # extract the indexes for the coordinates belonging to the
-        # current cluster
-        idxs = np.where(clustering.labels_ == l)[0]
-        col_df.loc[idxs, 'col'] = col_num
+    for (label, _) in sorted_clusters:
+        
+        # extract the indexes for the coordinates belonging to the current cluster
+        indexes = np.where(clustering.labels_ == label)[0]
+
+        # add this column number to the df, and increment
+        col_df.loc[indexes, 'col'] = col_num
         col_num = col_num + 1
         
-    # replace NaN values with an empty string and then show a nicely
-    # formatted version of our multi-column OCR'd text
+    # replace NaN values with empty strings
     df.fillna("", inplace=True)
-    #pdb.set_trace()
+
+    # return a dataframe with text, coordinates (with column-snapped x values), and column numbers
     return col_df
