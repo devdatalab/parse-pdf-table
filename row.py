@@ -23,50 +23,59 @@ def rowDetection(df, df_row_input, page_type):
     # ------------------------------------------------------------------- #
     # get the row key: in this case the first column which is 90% numbers #
     # ------------------------------------------------------------------- #
-    # currently always set to LHS
-    if page_type == "LHS":
-        sorted_cols = df_row_input['col'].unique()
-        sorted_cols = sorted_cols.tolist()
-        while None in sorted_cols:
-            sorted_cols.remove(None)
-        sorted_cols.sort()
-        # for every column in the dataframe
-        for col in sorted_cols:
-            page_df = df_row_input[df_row_input['col'] == col]
-            # if it's a long page
-            if len(page_df) > 30:
-                # if the column that is 90% #s hasn't been hit
-                if perc_num < 50:
-                    # get a T/F array of whether all chars of value are digits
-                    perc_num = page_df['text'].astype(str).apply(contains_number)
-                    # get a T/F array of whether value is nan or is not
-                    perc_nan = page_df['text'].astype(str).apply(is_nan)
-                    # get the percent of the non-nan values in a column that are numbers
-                    perc_num = (perc_num.sum() / (perc_nan.count() - perc_nan.sum())) * 100
-                    key_col = col
-                    if perc_num > max_num:
-                        max_num = perc_num
-                        max_col = col
+
+    # PN: This whole block gets skipped in the 2001 census, since one.pdf
+    #     is classified as RHS. Looks like we needed this for the 1951 census
+    #     parse, so we should keep it until we understand it. (Or create
+    #     an alt version of this for the 1951 census).
+    # if page_type == "LHS":
+    #     sorted_cols = df_row_input['col'].unique()
+    #     sorted_cols = sorted_cols.tolist()
+    #     while None in sorted_cols:
+    #         sorted_cols.remove(None)
+    #     sorted_cols.sort()
+    #     # for every column in the dataframe
+    #     for col in sorted_cols:
+    #         page_df = df_row_input[df_row_input['col'] == col]
+    #         # if it's a long page
+    #         if len(page_df) > 30:
+    #             # if the column that is 90% #s hasn't been hit
+    #             if perc_num < 50:
+    #                 # get a T/F array of whether all chars of value are digits
+    #                 perc_num = page_df['text'].astype(str).apply(contains_number)
+    #                 # get a T/F array of whether value is nan or is not
+    #                 perc_nan = page_df['text'].astype(str).apply(is_nan)
+    #                 # get the percent of the non-nan values in a column that are numbers
+    #                 perc_num = (perc_num.sum() / (perc_nan.count() - perc_nan.sum())) * 100
+    #                 key_col = col
+    #                 if perc_num > max_num:
+    #                     max_num = perc_num
+    #                     max_col = col
 
     # if there is no column that is 90% numbers...
     if max_num < 50:
+        
         # assign the first column as a key
         key_col = 0
 
     # --------------------------------------- #
     # create a row dataframe from the row key #
     # --------------------------------------- #
+
     # create a dataframe with just information about the rows
-    #rdf_int = df_row_input.copy()
+    # rdf_int = df_row_input.copy()
     # get the key column from df_row_input
     rdf_int = df_row_input[['y0', 'y1', 'x1', 'text', 'col']]
+
     # crop the row dataframe to just include the key column
     rdf_int = rdf_int[rdf_int['col'] == key_col]
+
     # make a copy so that the rdf dataframe can be manipulated / it's not just a slice of df_row_input
     rdf = rdf_int.copy()
-    #pdb.set_trace()
+
     rdf.reset_index(inplace=True, drop=True)
     rdf['row'] = rdf.index
+
     # get y midpoint for each row
     rdf['ymid'] = np.mean(rdf[['y0', 'y1']], axis=1)
     
@@ -122,9 +131,10 @@ def rowDetection(df, df_row_input, page_type):
         return r
     
     df = df.sort_values(by=["col", "y0"]).reset_index(drop=True)
+
     # assign each piece of text to the proper row
     df['row'] = df.apply(lambda row: match_to_row(row, rdf, .9, 0), axis=1)
     df = df[['y0', 'x1', 'row', 'text']]
-    #pdb.set_trace()
+
     return df
 
