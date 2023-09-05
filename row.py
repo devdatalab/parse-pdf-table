@@ -61,11 +61,16 @@ def rowDetection(df, df_row_input):
     # ----------- #
     # This function does the Bayesian updating of where (in terms of Y) we expect entries in a given row to be found.
     # The idea is if we see an entry shifted slightly down, we expect future entries to also be shifted down.
-    def update_row(row, df_row_key, theta, rowind):
-        df_row_key.at[rowind[0], 'ymid'] = theta * df_row_key.loc[rowind[0], "ymid"] + ((1-theta) * np.mean(row[['y0', 'y1']]))
-        df_row_key.at[rowind[0], 'y0'] = theta * df_row_key.loc[rowind[0], "y0"] + ((1-theta) * row['y0'])
-        df_row_key.at[rowind[0], 'y1'] = theta * df_row_key.loc[rowind[0], "y1"] + ((1-theta) * row['y1'])
-        df_row_key.at[rowind[0], 'rowarray'] = np.arange(np.round(df_row_key.loc[rowind[0], "y0"]), np.round(df_row_key.loc[rowind[0], "y1"]+1))
+    def update_row_key(row, df_row_key, theta, row_index):
+
+        # for each row characteristic R, we set the value to [ theta * R + (1 - theta) * (this row) ]
+        # PN: note: we update ymid, but it never gets used again.
+        df_row_key.at[row_index, 'ymid'] = theta * df_row_key.loc[row_index, "ymid"] + ((1 - theta) * np.mean(row[['y0', 'y1']]))
+        df_row_key.at[row_index, 'y0']   = theta * df_row_key.loc[row_index, "y0"]   + ((1 - theta) * row['y0'])
+        df_row_key.at[row_index, 'y1']   = theta * df_row_key.loc[row_index, "y1"]   + ((1 - theta) * row['y1'])
+
+        # rebuild the row integer array based on the updated values
+        df_row_key.at[row_index, 'rowarray'] = np.arange(np.round(df_row_key.loc[row_index, "y0"]), np.round(df_row_key.loc[row_index, "y1"] + 1))
         return df_row_key
     
     # ----------- #
@@ -98,15 +103,18 @@ def rowDetection(df, df_row_input):
         )
         
         # find the index with maximal overlap
-        rowind = df_row_key.loc[df_row_key["overlap"] == df_row_key["overlap"].max()].index
+        row_index = df_row_key.loc[df_row_key["overlap"] == df_row_key["overlap"].max()].index
         
         # if there are multiple overlaps at the max value, break ties with the 2nd overlap measure
-        if len(rowind) > 1:
-            rowind = df_row_key[df_row_key["overlap2"] == df_row_key.loc[rowind, "overlap2"].max()].index
+        if len(row_index) > 1:
+            row_index = df_row_key[df_row_key["overlap2"] == df_row_key.loc[row_index, "overlap2"].max()].index
 
+        # at this point, the row index can still be a list, but if so, there is no further way to reconcile,
+        # so we just pick the first
+        row_index = row_index[0]
+            
         # isolate the row from the selected index
-        # [PN: note this is arbitrarily picking a row if there is a list, but maybe this is fine.]
-        r = df_row_key.loc[rowind[0], "row"]
+        r = df_row_key.loc[row_index, "row"]
         
         # if the sum is 0, then there is no overlap with any row
         # and the text data falls outside the row
@@ -116,7 +124,7 @@ def rowDetection(df, df_row_input):
         # otherwise, update the df_row_key with the position of this entry --- it gives us more information
         #   about where this row tends to be found. And return the assigned row to the calling function.
         else:
-            df_row_key = update_row(row, df_row_key, theta, rowind)
+            df_row_key = update_row_key(row, df_row_key, theta, row_index)
         return r
     
     # run the row assignment algorithm on each row,
