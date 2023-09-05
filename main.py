@@ -53,10 +53,10 @@ words = page.get_text("words")
 # prep the pdf to be compatible with layout parser
 
 # LayoutParser wants a PNG of the PDF -- created it using the pixmap function. PN: This should be a temp file.
-# page.get_pixmap(dpi=300, alpha=False).pil_save("newCensus_output/input{}{}.png".format(district, doc_num))
+# page.get_pixmap(dpi=300, alpha=False).pil_save("out/input{}{}.png".format(district, doc_num))
 
 # open the png in the correct format for layoutparser
-# img = Image.open("newCensus_output/input{}{}.png".format(district, doc_num)).convert('RGB')
+# img = Image.open("out/input{}{}.png".format(district, doc_num)).convert('RGB')
 
 # apply a layoutparser id algorithm to the image, and return a list of coordinate arrays for cropping
 # the dataframe returned has a row for each block detected, with columns x0 y0 x1 y1 indicating coordinate in pixels
@@ -178,7 +178,7 @@ out_df = final_text.pivot(columns='col', index='row', values='text')
 out_df['tehsil'] = header_string
 
 # write it to a CSV
-filepath = 'newCensus_output/final_output{}{}{}.csv'.format(page_type, district, doc_num)
+filepath = 'out/final_output{}{}{}.csv'.format(page_type, district, doc_num)
 out_df.to_csv(filepath)
 
 
