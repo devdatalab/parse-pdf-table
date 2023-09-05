@@ -124,7 +124,9 @@ df_columns = columnDetection(df, dist_thresh, linkage_type)
 # ------------------------------------------------------------------------------------ #
 
 # get a column assignment that is more accurate for key purposes
-# 1. swap these two lines (!!!!!! PN: SORT ORDER MATTERS !!!!!!!)
+# PN: We get bad results if we swap these two lines. This is bad, sort order shouldn't matter!
+#     The internal functions should figure out the best sort order to use (or allow it to be specified
+#     in a parameter.)
 df_row_input = columnDetection(df, 8, linkage_type)
 df.sort_values(by=['y0'], ascending=[True], inplace=True)
 
