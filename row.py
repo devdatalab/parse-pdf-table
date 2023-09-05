@@ -13,45 +13,13 @@ def is_nan(item):
     return item == "nan"
 
 # given a dataframe of words and coordinates, assign each word to a row number
-def rowDetection(df, df_row_input, page_type):
-    print(page_type)
+def rowDetection(df, df_row_input):
+
     # initialize some values we will use later
     perc_num = 0
     max_num = 0
     max_col = 0
     
-    # ------------------------------------------------------------------- #
-    # get the row key: in this case the first column which is 90% numbers #
-    # ------------------------------------------------------------------- #
-
-    # PN: This whole block gets skipped in the 2001 census, since one.pdf
-    #     is classified as RHS. Looks like we needed this for the 1951 census
-    #     parse, so we should keep it until we understand it. (Or create
-    #     an alt version of this for the 1951 census).
-    # if page_type == "LHS":
-    #     sorted_cols = df_row_input['col'].unique()
-    #     sorted_cols = sorted_cols.tolist()
-    #     while None in sorted_cols:
-    #         sorted_cols.remove(None)
-    #     sorted_cols.sort()
-    #     # for every column in the dataframe
-    #     for col in sorted_cols:
-    #         page_df = df_row_input[df_row_input['col'] == col]
-    #         # if it's a long page
-    #         if len(page_df) > 30:
-    #             # if the column that is 90% #s hasn't been hit
-    #             if perc_num < 50:
-    #                 # get a T/F array of whether all chars of value are digits
-    #                 perc_num = page_df['text'].astype(str).apply(contains_number)
-    #                 # get a T/F array of whether value is nan or is not
-    #                 perc_nan = page_df['text'].astype(str).apply(is_nan)
-    #                 # get the percent of the non-nan values in a column that are numbers
-    #                 perc_num = (perc_num.sum() / (perc_nan.count() - perc_nan.sum())) * 100
-    #                 key_col = col
-    #                 if perc_num > max_num:
-    #                     max_num = perc_num
-    #                     max_col = col
-
     # if there is no column that is 90% numbers...
     if max_num < 50:
         

@@ -115,48 +115,26 @@ df = df.rename(
 
 # the column function takes an ocr dataframe and identifies clusters based on their relative distance from one another
 # the dataframe returned is a key: item dataframe where key is column number and item is OCR'd text within the current column
-# design decision: I chose to pass in full df from ocr text instead of necessary coords, then parse down within function. I think that df from ocr text is a common item. If it's not, could also just pass necessary coords
-
+# design decision: I chose to pass in full df from ocr text instead of necessary coords, then parse down within function.
+# I think that df from ocr text is a common item. If it's not, could also just pass necessary coords
 df_columns = columnDetection(df, dist_thresh, linkage_type)
 
 # ------------------------------------------------------------------------------------ #
 # 3 Row Detection: (Tool: Naive Bayes - Python) #
 # ------------------------------------------------------------------------------------ #
-# PN: THIS LOOKS LIKE A SET OF HARD-CODED PARAMETERS
+
 # get a column assignment that is more accurate for key purposes
 df_row_input = columnDetection(df, 8, linkage_type)
-
 df.sort_values(by=['y0'], ascending=[True], inplace=True)
+
 # combine with the data frame, which has block, line and word numbers
 df_row_input = pd.merge(df, df_row_input, on=['x1', 'y0', 'y1', 'text'])
-
-# determine if page is LHS or RHS: PN: THIS must be PDF-specific, and I think irrelevant for the new census
-# - use df_columns
-# for 'text' column in items in each column
-perc_character_max = 0
-for col in df_columns['col'].unique():
-    page_df = df_columns[df_columns['col'] == col]
-    if len(page_df) > 30:
-        # if there exists a column in the dataframe that is 90 percent words, this is a LHS page
-        perc_character = page_df['text'].astype(str).replace('nan','').apply(contains_chars)
-        #pdb.set_trace()
-        perc_character = (perc_character.sum() / perc_character.count()) * 100
-        if perc_character > perc_character_max:
-            perc_character_max = perc_character
-
-if perc_character_max > 50:
-    page_type = "LHS"
-else:
-    page_type = "RHS"
-print(page_type)
-
-
 
 # merge to the column classification dataset to get the table column number for each text block
 df = pd.merge(df, df_columns, on=['x1', 'y0', 'y1', 'text'])
 
 # run the row detection algorithm
-df_rows = rowDetection(df, df_row_input, page_type)
+df_rows = rowDetection(df, df_row_input)
 
 # merge the row numbers to the original dataframe
 df = pd.merge(df, df_rows, on=['x1', 'y0','text'])
@@ -178,7 +156,8 @@ out_df = final_text.pivot(columns='col', index='row', values='text')
 out_df['tehsil'] = header_string
 
 # write it to a CSV
-filepath = 'out/final_output{}{}{}.csv'.format(page_type, district, doc_num)
+filepath = 'out/final_output{}{}.csv'.format(district, doc_num)
 out_df.to_csv(filepath)
 
-
+# PN TMP: write it to an easier filename to diff
+out_df.to_csv('out/out.csv')
