@@ -124,29 +124,35 @@ df_columns = columnDetection(df, dist_thresh, linkage_type)
 # ------------------------------------------------------------------------------------ #
 
 # get a column assignment that is more accurate for key purposes
+# 1. swap these two lines (!!!!!! PN: SORT ORDER MATTERS !!!!!!!)
 df_row_input = columnDetection(df, 8, linkage_type)
 df.sort_values(by=['y0'], ascending=[True], inplace=True)
 
-# combine with the data frame, which has block, line and word numbers
+# pull in block, line and word numbers from the original dataframe
 df_row_input = pd.merge(df, df_row_input, on=['x1', 'y0', 'y1', 'text'])
 
-# merge to the column classification dataset to get the table column number for each text block
+# merge the CORRECT column classification into the primary dataset
+# PN: Note this is pretty confusing b/c we have two column classifications, both called 'col', 1 in df_columns and 1 in df_row_input
 df = pd.merge(df, df_columns, on=['x1', 'y0', 'y1', 'text'])
 
 # run the row detection algorithm
+# PN: scarily, both of these have a 'col' column, but based on a different run of the column detection algorithm!
 df_rows = rowDetection(df, df_row_input)
 
 # merge the row numbers to the original dataframe
 df = pd.merge(df, df_rows, on=['x1', 'y0','text'])
 
-# sort all values by y0, this should be sorting by rows
-df.sort_values(by=['y0'], ascending=[True], inplace=True)
-# IMPORTANT: added this for the new census example... if there are issues with 1951 now this is the first thing to comment out
-# PN: I'm confused why we sort by Y0 and then by X0
-df.sort_values(by=['x0'], ascending=[True], inplace=True)
+# PN: Ellie's code suggested that sort order might matter here -- I'm not sure why, but leaving the commented lines
+#     # sort all values by y0, this should be sorting by rows
+#     df.sort_values(by=['y0'], ascending=[True], inplace=True)
+#     # IMPORTANT: added this for the new census example... if there are issues with 1951 now this is the first thing to comment out
+#     df.sort_values(by=['x0'], ascending=[True], inplace=True)
+# PN: I replace with a sort on row, then column
+#     This should only affect the word order within cells --- the best approach depends on whether there are more X or Y errors. 
+#     row, then column, fits normal reading, but may be different for some PDFs
+df.sort_values(by=['y0', 'x0'], ascending=[True, True], inplace=True)
 
-
-# PN: This groups all the text in each cell (i.e. row/column pair) into one string, and makes a long dataframe from it
+# combine text strings that appear in the same cells
 final_text = df.groupby(['col', 'row'])['text'].apply(' '.join).reset_index()
 
 # reshape the dataframe to align values by row and column
