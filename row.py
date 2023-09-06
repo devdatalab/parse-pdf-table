@@ -13,8 +13,8 @@ def is_nan(item):
     return item == "nan"
 
 # given a dataframe of words and coordinates, assign each word to a row number
-def rowDetection(df, df_row_input):
-
+def detect_rows(df, df_row_input):
+    
     # PN: note that df and df_row_input BOTH have column numbers, which mean different things.
     #     df is the correct column ordering, while df_row_input's columns are over-split.
     #     Otherwise, these two input dataframes are the same (!!)

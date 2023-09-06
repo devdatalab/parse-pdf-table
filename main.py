@@ -1,7 +1,7 @@
 from layout import tableDetection
 #from ocr import ocrText
-from column import columnDetection
-from row import rowDetection
+from column import detect_columns
+from row import detect_rows
 from sys import argv
 import fitz
 from PIL import Image
@@ -117,7 +117,7 @@ df = df.rename(
 # the dataframe returned is a key: item dataframe where key is column number and item is OCR'd text within the current column
 # design decision: I chose to pass in full df from ocr text instead of necessary coords, then parse down within function.
 # I think that df from ocr text is a common item. If it's not, could also just pass necessary coords
-df_columns = columnDetection(df, dist_thresh, linkage_type)
+df_columns = detect_columns(df, dist_thresh, linkage_type)
 
 # ------------------------------------------------------------------------------------ #
 # 3 Row Detection: (Tool: Naive Bayes - Python) #
@@ -127,7 +127,7 @@ df_columns = columnDetection(df, dist_thresh, linkage_type)
 # PN: We get bad results if we swap these two lines. This is bad, sort order shouldn't matter!
 #     The internal functions should figure out the best sort order to use (or allow it to be specified
 #     in a parameter.)
-df_row_input = columnDetection(df, 8, linkage_type)
+df_row_input = detect_columns(df, 8, linkage_type)
 df.sort_values(by=['y0'], ascending=[True], inplace=True)
 
 # pull in block, line and word numbers from the original dataframe
@@ -139,7 +139,7 @@ df = pd.merge(df, df_columns, on=['x1', 'y0', 'y1', 'text'])
 
 # run the row detection algorithm
 # PN: scarily, both of these have a 'col' column, but based on a different run of the column detection algorithm!
-df_rows = rowDetection(df, df_row_input)
+df_rows = detect_rows(df, df_row_input)
 
 # merge the row numbers to the original dataframe
 df = pd.merge(df, df_rows, on=['x1', 'y0','text'])

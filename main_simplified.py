@@ -33,21 +33,24 @@ lp_options = {'modelType': 'tableBank', 'verbose': True}
 # call our layout parser function wrapper
 table_coords = get_table_coordinates_lp(page, pdf_filename, lp_options)
 
-# alternatively, call our own function that finds the table coordinates
-# this is probably project-specific and depends on the PDF layouts
+# Alternatively, call our own function that finds the table coordinates
+# This is probably project-specific and depends on the PDF layouts.
+# For example, the table y0 is right below the text "DISTRICT HANDBOOK"
 table_coords = get_table_coordinates_custom(page, pdf_filename)
+
+# table_coords is a dictionary with entries x0, y0, x1, y1 --- the bounding box of the table.
 
 # for now, assume that only one table is ever found
 if len(table_coords) > 1:
-    print('So far, no implementation for multiple tables in a file')
+    print('Error: So far we have no implementation for multiple tables in a file')
     sys.exit()
 
 # get all the PDF words inside the bounding box, and put them in a dataframe
 df_words = pd.DataFrame([w for w in words if fitz.Rect(w[:4]).intersects(fitz.Rect(table_coords["x0"], table_coords["y0"], table_coords["x1"], table_coords["y1"]))])
 
-# define the column names for the dataframe (there's probably a more concise way passing in a list)
+# define the column names for the dataframe
 column_names = ['x0', 'y0', 'x1', 'y1', 'text', 'block_no', 'line_no', 'word_no']
-df_words = df_words.rename(columns=dict(enumerate(column_names)))
+df_words = df_words.rename(columns = dict(enumerate(column_names)))
 
 # ------------------------------------------------------------------ #
 # 2.5 Custom steps to extract specific features from a page          #
