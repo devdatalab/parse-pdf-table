@@ -117,4 +117,4 @@ def parse_pdf_table(pdf_str:str, page_no:int):
     return None
 
 if __name__ == '__main__':
-    print(parse_pdf_table("~/ddl/parse-pdf-table/one.pdf", 483))
+    print(parse_pdf_table("~/iec/pc01/district_handbooks/DH_24_2001_BHN.pdf", 490))
