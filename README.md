@@ -1,8 +1,6 @@
-# data_scraper
-
 ### The big idea
 
-We start with a PDF with some embedded tables, where the text has already been processed by OCR, such tath 
+We read in tables from PDFs that have an underlying text layer for these tables.
 
 ## Quick start
 
@@ -12,11 +10,29 @@ conda env create -f parse-pdf-table.yml
 conda activate parse-pdf-table
 ```
 
-Create the output folder and run `main.py` on the test PDF
+### Testing code
+
+#### Command line interface
+
+We don't currently have a command line interface for pdfparser. But this code does the job pretty well.
+
 ```
 mkdir out
-python main.py one.pdf True 483 AHM
+python pdf_parser.py
 ```
+
+- This calls the following test case internally:
+
+``` 
+if __name__ == '__main__':
+    print(parse_pdf_table("~/iec/pc01/district_handbooks/DH_24_2001_BHN.pdf", 490))
+```
+
+### Usage within a program
+```
+parse_pdf_table(pdf_str:str, page_no:int)
+```
+where pdf_string is the string to the filepath, and page_no is the page number from which the table is to be read from.
 
 
 ### Transforming digitized text into meaningful data.
