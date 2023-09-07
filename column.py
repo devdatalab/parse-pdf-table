@@ -6,7 +6,7 @@ import pdb
 
 # given a dataframe from ocr'd text and AC parameters, assign each piece of text a column using HAC
 # return a dataframe with x0, y0, and column information
-def columnDetection(df, dist_thresh, linkage_type):
+def detect_columns(df, dist_thresh, linkage_type):
 
     # create the column dataframe which will be returned after column assignment
     # note the input dataframe has x0,x1, while the output only has x1, since x values

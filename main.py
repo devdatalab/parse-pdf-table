@@ -1,7 +1,7 @@
 # from layout import tableDetection
 #from ocr import ocrText
-from column import columnDetection
-from row import rowDetection
+from column import detect_columns
+from row import detect_rows
 from sys import argv
 import fitz
 from PIL import Image
@@ -69,7 +69,7 @@ words = page.get_text("words")
 # page.get_pixmap(dpi=300, alpha=False).pil_save("newCensus_output/input{}{}.png".format(district, doc_num))
 
 # open the png in the correct format for layoutparser
-# img = Image.open("newCensus_output/input{}{}.png".format(district, doc_num)).convert('RGB')
+# img = Image.open("out/input{}{}.png".format(district, doc_num)).convert('RGB')
 
 # apply a layoutparser id algorithm to the image, and return a list of coordinate arrays for cropping
 # the dataframe returned has a row for each block detected, with columns x0 y0 x1 y1 indicating coordinate in pixels
@@ -134,60 +134,48 @@ df = df.rename(
 
 # the column function takes an ocr dataframe and identifies clusters based on their relative distance from one another
 # the dataframe returned is a key: item dataframe where key is column number and item is OCR'd text within the current column
-# design decision: I chose to pass in full df from ocr text instead of necessary coords, then parse down within function. I think that df from ocr text is a common item. If it's not, could also just pass necessary coords
-df_columns = columnDetection(df, dist_thresh, linkage_type)
+
+# design decision: I chose to pass in full df from ocr text instead of necessary coords, then parse down within function.
+# I think that df from ocr text is a common item. If it's not, could also just pass necessary coords
+df_columns = detect_columns(df, dist_thresh, linkage_type)
 
 # ------------------------------------------------------------------------------------ #
 # 3 Row Detection: (Tool: Naive Bayes - Python) #
 # ------------------------------------------------------------------------------------ #
-# PN: THIS LOOKS LIKE A SET OF HARD-CODED PARAMETERS
-# get a column assignment that is more accurate for key purposes
-df_row_input = columnDetection(df, 8, linkage_type)
 
+# get a column assignment that is more accurate for key purposes
+# PN: We get bad results if we swap these two lines. This is bad, sort order shouldn't matter!
+#     The internal functions should figure out the best sort order to use (or allow it to be specified
+#     in a parameter.)
+df_row_input = detect_columns(df, 8, linkage_type)
 df.sort_values(by=['y0'], ascending=[True], inplace=True)
-# combine with the data frame, which has block, line and word numbers
+
+# pull in block, line and word numbers from the original dataframe
 df_row_input = pd.merge(df, df_row_input, on=['x1', 'y0', 'y1', 'text'])
 
-# determine if page is LHS or RHS:
-# PN: THIS must be PDF-specific, and I think irrelevant for the new census
-# KJ: Yes, this is from the 1950s census data
-# - use df_columns
-# for 'text' column in items in each column
-perc_character_max = 0
-for col in df_columns['col'].unique():
-    page_df = df_columns[df_columns['col'] == col]
-    if len(page_df) > 30:
-        # if there exists a column in the dataframe that is 90 percent words, this is a LHS page
-        perc_character = page_df['text'].astype(str).replace('nan','').apply(contains_chars)
-        #pdb.set_trace()
-        perc_character = (perc_character.sum() / perc_character.count()) * 100
-        if perc_character > perc_character_max:
-            perc_character_max = perc_character
 
-if perc_character_max > 50:
-    page_type = "LHS"
-else:
-    page_type = "RHS"
-print(page_type)
-
-# merge to the column classification dataset to get the table column number for each text block
+# merge the CORRECT column classification into the primary dataset
+# PN: Note this is pretty confusing b/c we have two column classifications, both called 'col', 1 in df_columns and 1 in df_row_input
 df = pd.merge(df, df_columns, on=['x1', 'y0', 'y1', 'text'])
 
 # run the row detection algorithm
-# KJ: The page_type argument needs to be removed.
-df_rows = rowDetection(df, df_row_input, page_type)
+# PN: scarily, both of these have a 'col' column, but based on a different run of the column detection algorithm!
+df_rows = detect_rows(df, df_row_input)
 
 # merge the row numbers to the original dataframe
 df = pd.merge(df, df_rows, on=['x1', 'y0','text'])
 
-# sort all values by y0, this should be sorting by rows
-df.sort_values(by=['y0'], ascending=[True], inplace=True)
-# IMPORTANT: added this for the new census example... if there are issues with 1951 now this is the first thing to comment out
-# PN: I'm confused why we sort by Y0 and then by X0
-df.sort_values(by=['x0'], ascending=[True], inplace=True)
+# PN: Ellie's code suggested that sort order might matter here -- I'm not sure why, but leaving the commented lines
+#     # sort all values by y0, this should be sorting by rows
+#     df.sort_values(by=['y0'], ascending=[True], inplace=True)
+#     # IMPORTANT: added this for the new census example... if there are issues with 1951 now this is the first thing to comment out
+#     df.sort_values(by=['x0'], ascending=[True], inplace=True)
+# PN: I replace with a sort on row, then column
+#     This should only affect the word order within cells --- the best approach depends on whether there are more X or Y errors. 
+#     row, then column, fits normal reading, but may be different for some PDFs
+df.sort_values(by=['y0', 'x0'], ascending=[True, True], inplace=True)
 
-
-# PN: This groups all the text in each cell (i.e. row/column pair) into one string, and makes a long dataframe from it
+# combine text strings that appear in the same cells
 final_text = df.groupby(['col', 'row'])['text'].apply(' '.join).reset_index()
 
 # reshape the dataframe to align values by row and column
@@ -197,7 +185,8 @@ out_df = final_text.pivot(columns='col', index='row', values='text')
 out_df['tehsil'] = header_string
 
 # write it to a CSV
-filepath = 'newCensus/final_output{}{}{}.csv'.format(page_type, district, doc_num)
+filepath = 'out/final_output{}{}.csv'.format(district, doc_num)
 out_df.to_csv(filepath)
 
-
+# PN TMP: write it to an easier filename to diff
+out_df.to_csv('out/out.csv')

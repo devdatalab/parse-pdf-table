@@ -13,21 +13,134 @@ def is_nan(item):
     return item == "nan"
 
 # given a dataframe of words and coordinates, assign each word to a row number
-def rowDetection(df, df_row_input, page_type):
-    print(page_type)
+def detect_rows(df, df_row_input):
+    
+    # PN: note that df and df_row_input BOTH have column numbers, which mean different things.
+    #     df is the correct column ordering, while df_row_input's columns are over-split.
+    #     Otherwise, these two input dataframes are the same (!!)
+    
     # initialize some values we will use later
     perc_num = 0
     max_num = 0
     max_col = 0
     
-    # ------------------------------------------------------------------- #
-    # get the row key: in this case the first column which is 90% numbers #
-    # ------------------------------------------------------------------- #
+    # assign the first column as the key
+    # PN: Note, in other iterations, we assigned the first string column as a key...
+    key_col = 0
+
+    # --------------------------------------- #
+    # create a row dataframe from the row key #
+    # --------------------------------------- #
+
+    # GET A DATAFRAME WITH JUST THE ENTRIES IN THE VERY FIRST COLUMN (the "key" column)
+    
+    # create a dataframe with just information about the rows
+
+    # get the key column from df_row_input
+    df_row_key_int = df_row_input[['y0', 'y1', 'x1', 'text', 'col']]
+
+    # subset the row dataframe to just include the key column. Copy it, so we can manipulate later.
+    df_row_key = df_row_key_int[df_row_key_int['col'] == key_col].copy()
+
+    # assign sequential row numbers to these fields.
+    df_row_key.reset_index(inplace=True, drop=True)
+    df_row_key['row'] = df_row_key.index
+
+    # get the y midpoint for each row
+    df_row_key['ymid'] = np.mean(df_row_key[['y0', 'y1']], axis=1)
+    
+    # For each entry in the key, make an array with all integer y values (e.g. [5, 6, 7, 8, 9]
+    df_row_key["rowarray"] = df_row_key.apply(lambda row: np.arange(np.round(row["y0"]), np.round(row["y1"]+1)), axis=1)
+
+    # sort the input dataframe by column, and then by y value.
+    # PN: It's mainly important for words to be sorted by y0, as we use Y information on the last word assigned
+    #     to handle skew.
+    df = df.sort_values(by=["col", "y0"]).reset_index(drop=True)
+
+    
+    # ----------- #
+    # This function does the Bayesian updating of where (in terms of Y) we expect entries in a given row to be found.
+    # The idea is if we see an entry shifted slightly down, we expect future entries to also be shifted down.
+    def update_row_key(row, df_row_key, theta, row_index):
+
+        # for each row characteristic R, we set the value to [ theta * R + (1 - theta) * (this row) ]
+        # PN: note: we update ymid, but it never gets used again.
+        df_row_key.at[row_index, 'ymid'] = theta * df_row_key.loc[row_index, "ymid"] + ((1 - theta) * np.mean(row[['y0', 'y1']]))
+        df_row_key.at[row_index, 'y0']   = theta * df_row_key.loc[row_index, "y0"]   + ((1 - theta) * row['y0'])
+        df_row_key.at[row_index, 'y1']   = theta * df_row_key.loc[row_index, "y1"]   + ((1 - theta) * row['y1'])
+
+        # rebuild the row integer array based on the updated values
+        df_row_key.at[row_index, 'rowarray'] = np.arange(np.round(df_row_key.loc[row_index, "y0"]), np.round(df_row_key.loc[row_index, "y1"] + 1))
+        return df_row_key
+    
+    # ----------- #
+    # This function takes a row from the main dataframe, and matches it to a row from df_row_key.
+    # It also updates df_row_key with information from that row --- each row affects where we
+    # expect future entries in this row to appear.
+    # ----------- #
+    def match_to_row(row, df_row_key, theta):
+        """
+        Compare the y coords for each piece of text data
+        to the coords determined for the rows. Determine the
+        percentage overlap with this piece of text and every row,
+        then pick the maximum overlap.
+        """
+
+        # create the array for the width of the piece of text data
+        txtarray = np.arange(np.round(row["y0"]), np.round(row["y1"]))
+
+        # we create two overlap measures. 1: (overlap y range) / (word height)
+        #                                 2: (overlap y range) / (row height)
+        # PN: change this to just do the math operation instead of using these discrete arrays
+        
+        # calculate the overlap between the txtarray and each row wrt the txt array
+        df_row_key["overlap"] = df_row_key["rowarray"].apply(
+            lambda y: len(np.intersect1d(y, txtarray)) / len(txtarray)
+        )
+        # calculate the overlap between the txtarray and each row wrt each row
+        df_row_key["overlap2"] = df_row_key["rowarray"].apply(
+            lambda y: len(np.intersect1d(y, txtarray)) / len(y)
+        )
+        
+        # find the index with maximal overlap
+        row_index = df_row_key.loc[df_row_key["overlap"] == df_row_key["overlap"].max()].index
+        
+        # if there are multiple overlaps at the max value, break ties with the 2nd overlap measure
+        if len(row_index) > 1:
+            row_index = df_row_key[df_row_key["overlap2"] == df_row_key.loc[row_index, "overlap2"].max()].index
+
+        # at this point, the row index can still be a list, but if so, there is no further way to reconcile,
+        # so we just pick the first
+        row_index = row_index[0]
+            
+        # isolate the row from the selected index
+        r = df_row_key.loc[row_index, "row"]
+        
+        # if the sum is 0, then there is no overlap with any row
+        # and the text data falls outside the row
+        if df_row_key["overlap"].sum() == 0:
+            r = np.nan
+
+        # otherwise, update the df_row_key with the position of this entry --- it gives us more information
+        #   about where this row tends to be found. And return the assigned row to the calling function.
+        else:
+            df_row_key = update_row_key(row, df_row_key, theta, row_index)
+        return r
+    
+    # run the row assignment algorithm on each row,
+    # PN: what is the meaning of starting theta=0.9?
+    df['row'] = df.apply(lambda row: match_to_row(row, df_row_key, .9), axis=1)
+    df = df[['y0', 'x1', 'row', 'text']]
+
+    return df
+
 
     # PN: This whole block gets skipped in the 2001 census, since one.pdf
     #     is classified as RHS. Looks like we needed this for the 1951 census
-    #     parse, so we should keep it until we understand it. (Or create
-    #     an alt version of this for the 1951 census).
+    #     parse, so we should keep it until we understand it. This is the kind
+    #     of code that would go in the wrapper function for the canals-specific
+    #     analysis.
+    # 
     # if page_type == "LHS":
     #     sorted_cols = df_row_input['col'].unique()
     #     sorted_cols = sorted_cols.tolist()
@@ -51,90 +164,3 @@ def rowDetection(df, df_row_input, page_type):
     #                 if perc_num > max_num:
     #                     max_num = perc_num
     #                     max_col = col
-
-    # if there is no column that is 90% numbers...
-    if max_num < 50:
-        
-        # assign the first column as a key
-        key_col = 0
-
-    # --------------------------------------- #
-    # create a row dataframe from the row key #
-    # --------------------------------------- #
-
-    # create a dataframe with just information about the rows
-    # rdf_int = df_row_input.copy()
-    # get the key column from df_row_input
-    rdf_int = df_row_input[['y0', 'y1', 'x1', 'text', 'col']]
-
-    # crop the row dataframe to just include the key column
-    rdf_int = rdf_int[rdf_int['col'] == key_col]
-
-    # make a copy so that the rdf dataframe can be manipulated / it's not just a slice of df_row_input
-    rdf = rdf_int.copy()
-
-    rdf.reset_index(inplace=True, drop=True)
-    rdf['row'] = rdf.index
-
-    # get y midpoint for each row
-    rdf['ymid'] = np.mean(rdf[['y0', 'y1']], axis=1)
-    
-    # make an array for each row that describes the full height of the column
-    rdf["rowarray"] = rdf.apply(lambda row: np.arange(np.round(row["y0"]), np.round(row["y1"]+1)), axis=1)
-
-
-    def updateRow(row, rdf, theta, rowind):
-        rdf.at[rowind[0], 'ymid'] = theta * rdf.loc[rowind[0], "ymid"] + ((1-theta) * np.mean(row[['y0', 'y1']]))
-        rdf.at[rowind[0], 'y0'] = theta * rdf.loc[rowind[0], "y0"] + ((1-theta) * row['y0'])
-        rdf.at[rowind[0], 'y1'] = theta * rdf.loc[rowind[0], "y1"] + ((1-theta) * row['y1'])
-        rdf.at[rowind[0], 'rowarray'] = np.arange(np.round(rdf.loc[rowind[0], "y0"]), np.round(rdf.loc[rowind[0], "y1"]+1))
-        return rdf
-    
-    # ----------- #
-    # Assign rows #
-    # ----------- #
-    def match_to_row(row, rdf, theta, count):
-        """
-        Compare the y coords for each piece of text data
-        to the coords determined for the rows. Determine the
-        percentage overlap with this piece of text and every row,
-        then pick the maximum overlap.
-        """
-        # create the array for the width of the piece of text data
-        txtarray = np.arange(np.round(row["y0"]), np.round(row["y1"]))
-        
-        # calculate the overlap between the txtarray and each row wrt the txt array
-        rdf["overlap"] = rdf["rowarray"].apply(
-            lambda y: len(np.intersect1d(y, txtarray)) / len(txtarray)
-        )
-        # calculate the overlap between the txtarray and each row wrt each row
-        rdf["overlap2"] = rdf["rowarray"].apply(
-            lambda y: len(np.intersect1d(y, txtarray)) / len(y)
-        )
-        
-        # find the index in which the overlap is maximized
-        rowind = rdf.loc[rdf["overlap"] == rdf["overlap"].max()].index
-        
-        # check if there were multiple matches
-        if len(rowind) > 1:
-            rowind = rdf[rdf["overlap2"] == rdf.loc[rowind, "overlap2"].max()].index
-
-        # isolate the row from the selected index
-        r = rdf.loc[rowind[0], "row"]
-        
-        # if the sum is 0, then there is no overlap with any row
-        # and the text data falls outside the row
-        if rdf["overlap"].sum() == 0:
-            r = np.nan
-        else:
-            rdf = updateRow(row, rdf, theta, rowind)
-        return r
-    
-    df = df.sort_values(by=["col", "y0"]).reset_index(drop=True)
-
-    # assign each piece of text to the proper row
-    df['row'] = df.apply(lambda row: match_to_row(row, rdf, .9, 0), axis=1)
-    df = df[['y0', 'x1', 'row', 'text']]
-
-    return df
-

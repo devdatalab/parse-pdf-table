@@ -14,7 +14,7 @@ conda activate parse-pdf-table
 
 Create the output folder and run `main.py` on the test PDF
 ```
-mkdir newCensus_output
+mkdir out
 python main.py one.pdf True 483 AHM
 ```
 
