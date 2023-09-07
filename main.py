@@ -1,4 +1,4 @@
-from layout import tableDetection
+# from layout import tableDetection
 #from ocr import ocrText
 from column import columnDetection
 from row import rowDetection
@@ -11,6 +11,9 @@ import re
 
 
 def contains_chars(item):
+    """
+    KJ: This seems to be a function that checks if an object (passed as item) has at least 4 alphabetical characters or not.
+    """
     item = str(item)
     pattern = re.compile('[a-zA-Z]')
     matches = pattern.findall(item)
@@ -25,10 +28,14 @@ def contains_chars(item):
 # 0 Settings #
 # ---------- #
 # Set Layout Parser parameters: model type for layout blocks
+# KJ: Not used anymore since we don't always use layoutparser for table detection.
 modelType = "tableBank"
 verbose = True
+
 #argv[2]
-# Set PDF file and the page number to parse. PN: district looks unnecessary -- some hard-coding of file type
+# Set PDF file and the page number to parse.
+# PN: district looks unnecessary -- some hard-coding of file type
+# KJ: district used only to name the final saved file.
 fn = "{}".format(argv[1])
 doc_num = int(argv[3])
 district = str(argv[4])
@@ -38,11 +45,16 @@ district = str(argv[4])
 # --------------- #
 
 # open the desired PDF page with fitz
+# KJ: This will fail if the pdf is not in the same directory, or if the correct posix path isn't specified.
 doc = fitz.open(fn)
+
 # get page object for pixmap
 page = doc[doc_num]
+
 # get the ocr text layer from the pdf
+
 # TO DO: for better generalizability, add code here to ocr the text and assign to words object in case ocr text layer doesn't exist
+
 # words is a list of items (x0, y0, x1, y1, "word", block_no, line_no, word_no)
 words = page.get_text("words")
 
@@ -52,7 +64,8 @@ words = page.get_text("words")
 # definitions for section 2
 # prep the pdf to be compatible with layout parser
 
-# LayoutParser wants a PNG of the PDF -- created it using the pixmap function. PN: This should be a temp file.
+# LayoutParser wants a PNG of the PDF -- created it using the pixmap function.
+# PN: This should be a temp file.
 # page.get_pixmap(dpi=300, alpha=False).pil_save("newCensus_output/input{}{}.png".format(district, doc_num))
 
 # open the png in the correct format for layoutparser
@@ -70,14 +83,18 @@ words = page.get_text("words")
 #i = 0
 
 #PN: It looks like layoutparser returns a list of blocks. We loop over it and get the list of fitz word objects that were found in that block.
+
 # get information about words (x0, y0, x1, y1, "word", block_no, line_no, word_no) within each layout parser block by cropping the extracted ocr text layer (words)
 # crop is based on the coordinates of each layout parser block
+
 #for i in range(num_blocks - 1):
         #mywords[i] = [w for w in words if fitz.Rect(w[:4]).intersects(fitz.Rect((bounding_coordinates["x0"].loc[i], bounding_coordinates["y0"].loc[i], bounding_coordinates["x1"].loc[i], bounding_coordinates["y1"].loc[i])))]
 
 # PN: This looks like a hard-coded PDF location to pull words from --- and might be the table or page header. It says DISTRICT CENSUS...
+# KJ: The header string was something used to pull out Tehsil information for the 1950 census.
 header = [w for w in words if fitz.Rect(w[:4]).intersects(fitz.Rect((0, 0, 2980, 150)))]
 # PN: header returned 57 words. The next lines of code ignore location and just pull the string values from this.
+
 #cropped_words = [w for w in words if fitz.Rect(w[:4]).intersects(fitz.Rect((bounding_coordinates["x0"][0], bounding_coordinates["y0"][0], bounding_coordinates["x1"][0], bounding_coordinates["y1"][0])))]
 # sort the list by x value
 header.sort(key=lambda x: x[1])
@@ -96,7 +113,9 @@ header_string = " ".join(str(x) for x in header)
 dist_thresh = 50
 linkage_type = "average"
 # PN: get the full word list into a dataframe
+
 # this will be mywords[0] once cropping is worked out
+# KJ: mywords[0] being the object created by layoutparser.
 df = pd.DataFrame(words)
 
 # set column names
@@ -116,7 +135,6 @@ df = df.rename(
 # the column function takes an ocr dataframe and identifies clusters based on their relative distance from one another
 # the dataframe returned is a key: item dataframe where key is column number and item is OCR'd text within the current column
 # design decision: I chose to pass in full df from ocr text instead of necessary coords, then parse down within function. I think that df from ocr text is a common item. If it's not, could also just pass necessary coords
-
 df_columns = columnDetection(df, dist_thresh, linkage_type)
 
 # ------------------------------------------------------------------------------------ #
@@ -130,7 +148,9 @@ df.sort_values(by=['y0'], ascending=[True], inplace=True)
 # combine with the data frame, which has block, line and word numbers
 df_row_input = pd.merge(df, df_row_input, on=['x1', 'y0', 'y1', 'text'])
 
-# determine if page is LHS or RHS: PN: THIS must be PDF-specific, and I think irrelevant for the new census
+# determine if page is LHS or RHS:
+# PN: THIS must be PDF-specific, and I think irrelevant for the new census
+# KJ: Yes, this is from the 1950s census data
 # - use df_columns
 # for 'text' column in items in each column
 perc_character_max = 0
@@ -150,12 +170,11 @@ else:
     page_type = "RHS"
 print(page_type)
 
-
-
 # merge to the column classification dataset to get the table column number for each text block
 df = pd.merge(df, df_columns, on=['x1', 'y0', 'y1', 'text'])
 
 # run the row detection algorithm
+# KJ: The page_type argument needs to be removed.
 df_rows = rowDetection(df, df_row_input, page_type)
 
 # merge the row numbers to the original dataframe
@@ -178,7 +197,7 @@ out_df = final_text.pivot(columns='col', index='row', values='text')
 out_df['tehsil'] = header_string
 
 # write it to a CSV
-filepath = 'newCensus_output/final_output{}{}{}.csv'.format(page_type, district, doc_num)
+filepath = 'newCensus/final_output{}{}{}.csv'.format(page_type, district, doc_num)
 out_df.to_csv(filepath)
 
 

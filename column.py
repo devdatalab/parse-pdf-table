@@ -15,6 +15,7 @@ def columnDetection(df, dist_thresh, linkage_type):
     df_col['col'] = None
 
     # select the x coordinates from the df and convert them to correct format for HAC
+    # have a placeholder value for columns, i.e. add a 0 to default coloumn value.
     xCoords = df_col.apply(lambda x: (x['x1'], 0), axis=1)
     xCoords = xCoords.values.tolist()
     
