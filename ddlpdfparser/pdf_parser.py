@@ -11,13 +11,19 @@ from pathlib import Path
 from utils import within_bounding_box
 
 def parse_pdf_table(pdf_str:str, page_no:int, outfile:str=None, key_col:int=0, oversplit=False, num_columns=None, column_linkage_type="average", 
-                    col_x_index:str="x1", dist_thresh:int=50, bounding_box:list=None, metric_type="manhattan"):
+                    col_x_index:str="x1", dist_thresh:int=50, bounding_box:list=None, metric_type="manhattan", theta:float=0.9):
     """
     This function takes the pdf_path and page number of the pdf as an input, reads in the table 
     on the page. Assumes entire page is the table unless a bounding_box is specified. 
     
     """
-
+    ##################
+    # Error checking #
+    ##################
+    # Only one of dist_thresh or num_columns should be provided as HAC arguments
+    if (dist_thresh != None and num_columns != None):
+        raise ValueError("Either dist_thresh or num_columns must be none")
+    
     #################################################################
     # To Do: Add layout parser block here to detect table on page # #
     #################################################################
@@ -57,42 +63,26 @@ def parse_pdf_table(pdf_str:str, page_no:int, outfile:str=None, key_col:int=0, o
     #####################################################################################
 
     # Set parameters for column detection
-  
-    # bounding_box = [50,150,500,600] 
-    # this is from manual inspection of DH_24_2001_BHN.pdf
-    
     # the column function takes an ocr dataframe and identifies clusters based on their relative distance from one another
     # the dataframe returned is a key: item dataframe where key is column number and item is text within the current column
-    # KJ: Currently defaults are for dist_thresh to be 50 and num_columns to be None. How does this number of 50 come about? Is it manually tested? Unclear.
     df_columns = detect_columns(df=words_df, dist_thresh=dist_thresh, linkage_type=column_linkage_type, 
                                 num_columns=num_columns, bounding_box=bounding_box, x_index=col_x_index, metric_type=metric_type)
 
     # merge words_df with column info
     words_df = pd.merge(words_df, df_columns, on=['x1', 'y0', 'y1', 'text'])
 
-
     ###################
     # Row Detection # #
     ###################
     # arrange words dataframe by y0 so we can order on rows. 
-    # KJ: Note any column designation after this using detect_columns will be
-    # erroneous. Unclear why this is the case.
     words_df.sort_values(by=['y0'], ascending=[True], inplace=True)
-
-    # get a column assignment that is more accurate for key purposes
-    # KJ: This distance threshold parameter seems to be determined manually. And is rather brittle to changes.
-    # Moreover, it's hard to know beforehand, especially if there are many tables without varying layouts if this will
-    # work for all of them. 
     
-    # KJ: Oversplit method doesn't always work on all pages. 
-    # df_row_input = detect_columns(words_df, dist_thresh=8, linkage_type="average")
-    # Fails for parse_pdf_table("~/iec/pc01/district_handbooks/DH_33_2001_KKU.pdf", 278)
-    # df_row_input = df_columns, with key_column set to 0, works for this. 
-    # KJ: Create function here with intelligent defaults that gets a key row used to snap rows to. 
+    # Get's a master row key, from a key column (that has all row entries), to which we snap the other
+    # rows (of other columns) to.
     df_row_key = get_key_row(words_df=words_df, columns=df_columns, num_columns = num_columns, key_col=key_col, oversplit_col=oversplit)
 
-    # run the row detection algorithm
-    df_rows = detect_rows(words_df, df_row_key, theta=1)
+    # run the row detection algorithm to snap all rows from all columns to the master row key in df_row_key
+    df_rows = detect_rows(words_df, df_row_key, theta=theta)
 
     # merge the row numbers to the original dataframe
     words_df = pd.merge(words_df, df_rows, on=['x1', 'y0','text'])

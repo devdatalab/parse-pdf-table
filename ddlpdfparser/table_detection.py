@@ -1,5 +1,4 @@
 # This has the row and column detection functions
-
 from sklearn.cluster import AgglomerativeClustering
 import pandas as pd
 import numpy as np
@@ -102,7 +101,7 @@ def detect_columns(df:pd.DataFrame, dist_thresh:int=50, linkage_type:str="averag
 ###########################
 
 # given a dataframe of words and coordinates, assign each word to a row number
-def detect_rows(df:pd.DataFrame, df_row_key:pd.DataFrame, theta:int=1):
+def detect_rows(df:pd.DataFrame, df_row_key:pd.DataFrame, theta:float):
       
       # KJ: Note: df_row_key no longer has a confusing "col" column, it's only needed for selecting the desired row, 
       # which we do and then get rid of.
@@ -113,7 +112,7 @@ def detect_rows(df:pd.DataFrame, df_row_key:pd.DataFrame, theta:int=1):
       # run the row assignment algorithm on each row,
       # KJ: Theta parameter is for the bayesian updating of slanted tables, default set to 1. Can edit across projects.
       # Rename to bayes_theta so there's no doubt about this    
-      df['row'] = df.apply(lambda row: match_to_row(row, df_row_key, theta=1), axis=1)
+      df['row'] = df.apply(lambda row: match_to_row(row, df_row_key, theta=theta), axis=1)
       df = df[['y0', 'x1', 'row', 'text']]
 
       return df

@@ -55,7 +55,7 @@ def update_row_key(row, df_row_key, theta, row_index):
 # It also updates df_row_key with information from that row --- each row affects where we
 # expect future entries in this row to appear.
 # ----------- #
-def match_to_row(row:pd.Series, df_row_key:pd.DataFrame, theta:float=1):
+def match_to_row(row:pd.Series, df_row_key:pd.DataFrame, theta:float):
     """
     Compare the y coords for each piece of text data
     to the coords determined for the rows. Determine the
@@ -70,7 +70,7 @@ def match_to_row(row:pd.Series, df_row_key:pd.DataFrame, theta:float=1):
     row_index = df_row_key.loc[df_row_key["overlap"] == df_row_key["overlap"].max()].index
     
     # at this point, the row index can still be a list, so we just pick the first. 
-    # KJ: think about making this better later. Seems to work well enough for now.
+    # this will happen if the sizes of different rows are different.
     row_index = row_index[0]
         
     # isolate the row from the selected index
@@ -92,7 +92,12 @@ def get_overlap_key_row(row:pd.Series, df_row_key:pd.DataFrame):
     Helper function to calculate overlap between a row (of a dataframe passed as a series object) and the df_row_key, which has positional information
     from the key column we use to separate rows. 
     """
+    # overlap calulates overlap between two numbers:(y0,y1) and (y0_key, y1_key). Where y1 > y0 and y1_key >y0_key,
+    # Drawing these out on a number line will persuade you that min(y1,y1_key) - max(y0,y0_key) gives you the overlap. This is what the inner np.min/max functions do.
+    # Then, if there is no overlap, which means the overlap parameter is negative, we replace that with zero (outermost np.max does this)
     overlap = np.maximum(0,(np.minimum(row["y1"], df_row_key["y1_key"]) - np.maximum(row["y0"], df_row_key["y0_key"])))
+
+    # we divide the overlap parameter by the row_length to normalise it between 0 and 1.
     row_length = row["y1"] - row["y0"]
     overlap = overlap/row_length
     return overlap
