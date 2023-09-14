@@ -3,7 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pdfparser"
+name = "ddlpdfparser"
 version = "0.0.1"
 dependencies = [
     "PyMuPDF",
