@@ -118,7 +118,7 @@ def parse_pdf_table(pdf_str:str, page_no:int, key_col:int=0, oversplit=False, nu
 
     return None
 
-if __name__ == '__main__':
-    #print(parse_pdf_table("~/iec/pc01/district_handbooks/DH_33_2001_KKU.pdf", 278, dist_thresh=None, num_columns=7))
-    #print(parse_pdf_table("~/iec/pc01/district_handbooks/DH_24_2001_BHN.pdf", 490))
-    print(parse_pdf_table("~/iec/pc01/district_handbooks/DH_24_2001_BHN.pdf", 490, dist_thresh=None, num_columns=7))
+#if __name__ == '__main__':
+#    #print(parse_pdf_table("~/iec/pc01/district_handbooks/DH_33_2001_KKU.pdf", 278, dist_thresh=None, num_columns=7))
+#    #print(parse_pdf_table("~/iec/pc01/district_handbooks/DH_24_2001_BHN.pdf", 490))
+#    print(parse_pdf_table("~/iec/pc01/district_handbooks/DH_24_2001_BHN.pdf", 490, dist_thresh=None, num_columns=7))

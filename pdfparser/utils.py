@@ -48,9 +48,6 @@ def update_row_key(row, df_row_key, theta, row_index):
     df_row_key.at[row_index, 'y0']   = theta * df_row_key.loc[row_index, "y0_key"]   + ((1 - theta) * row['y0'])
     df_row_key.at[row_index, 'y1']   = theta * df_row_key.loc[row_index, "y1_key"]   + ((1 - theta) * row['y1'])
 
-    # rebuild the row integer array based on the updated values
-    # KJ: Don't fully understand how this works. Use a page from 1951 census to see how this works...
-    # df_row_key.at[row_index, 'rowarray'] = np.arange(np.round(df_row_key.loc[row_index, "y0"]), np.round(df_row_key.loc[row_index, "y1"] + 1))
     return df_row_key
 
 # ----------- #
