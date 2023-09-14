@@ -10,22 +10,17 @@ import re
 from pathlib import Path
 from utils import within_bounding_box
 
-# KJ: Features to add to this:
-# Arguments:
-# 1. output_path: to specify where the finalised table will be stored. Default value ? $out from environment?
-# create an out in the current directory?
-
-def parse_pdf_table(pdf_str:str, page_no:int, key_col:int=0, oversplit=False, num_columns=None, column_linkage_type="average", 
-                    col_x_index:str="x1", dist_thresh:int=50, bounding_box:list=None, metric_type="manhattan", outfile:str=None):
+def parse_pdf_table(pdf_str:str, page_no:int, outfile:str=None, key_col:int=0, oversplit=False, num_columns=None, column_linkage_type="average", 
+                    col_x_index:str="x1", dist_thresh:int=50, bounding_box:list=None, metric_type="manhattan"):
     """
     This function takes the pdf_path and page number of the pdf as an input, reads in the table 
     on the page. Assumes entire page is the table unless a bounding_box is specified. 
     
     """
 
-    ########################################################
-    # Add layout parser block here to detect table on page #
-    ########################################################
+    #################################################################
+    # To Do: Add layout parser block here to detect table on page # #
+    #################################################################
 
     #########################################
     # Use fitz to read in words on the page #
@@ -75,14 +70,15 @@ def parse_pdf_table(pdf_str:str, page_no:int, key_col:int=0, oversplit=False, nu
     # merge words_df with column info
     words_df = pd.merge(words_df, df_columns, on=['x1', 'y0', 'y1', 'text'])
 
+
+    ###################
+    # Row Detection # #
+    ###################
     # arrange words dataframe by y0 so we can order on rows. 
     # KJ: Note any column designation after this using detect_columns will be
     # erroneous. Unclear why this is the case.
     words_df.sort_values(by=['y0'], ascending=[True], inplace=True)
 
-    ###############################################
-    # Row Detection #
-    ###############################################
     # get a column assignment that is more accurate for key purposes
     # KJ: This distance threshold parameter seems to be determined manually. And is rather brittle to changes.
     # Moreover, it's hard to know beforehand, especially if there are many tables without varying layouts if this will
@@ -110,13 +106,12 @@ def parse_pdf_table(pdf_str:str, page_no:int, key_col:int=0, oversplit=False, nu
     out_df = final_text.pivot(columns='col', index='row', values='text')
 
     # write it to a CSV
-    if outfile == None:
-        outfile = f'out/final_output{page_no}.csv'
-    out_df.to_csv(outfile)
-    
-    print("done")
-
-    return None
+    if outfile != None: 
+        outfile = Path(outfile).expanduser()
+        out_df.to_csv(outfile)
+        print(f"Table written to {outfile}")
+        
+    return out_df
 
 #if __name__ == '__main__':
 #    #print(parse_pdf_table("~/iec/pc01/district_handbooks/DH_33_2001_KKU.pdf", 278, dist_thresh=None, num_columns=7))

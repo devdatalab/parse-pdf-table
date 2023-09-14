@@ -9,32 +9,35 @@ Create a conda environment from the included config file:
 conda env create -f parse-pdf-table.yml
 conda activate parse-pdf-table
 ```
+Navigate to the github directory, which on polaris looks usually like:
+```
+~/ddl/parse-pdf-table
+```
+
+Install the `pdfparser` library
+```
+pip install --editable .
+```
 
 ### Testing code
 
-#### Command line interface
-
-We don't currently have a command line interface for pdfparser. But this code does the job pretty well.
-
-```
-mkdir out
-python pdf_parser.py
-```
-
-- This calls the following test case internally:
-
-``` 
-if __name__ == '__main__':
-    print(parse_pdf_table("~/iec/pc01/district_handbooks/DH_24_2001_BHN.pdf", 490))
-```
-
 ### Usage within a program
+
 ```
-parse_pdf_table(pdf_str:str, page_no:int)
-```
-where pdf_string is the string to the filepath, and page_no is the page number from which the table is to be read from.
+import pdfparser as parser
+import pdb
 
 
+out_df = parser.parse_pdf_table(pdf_str="~/iec/pc01/district_handbooks/DH_33_2001_KKU.pdf",
+                                outfile = "/scratch/kjha/out.csv", page_no=278, dist_thresh=None, num_columns=7)
+```
+
+Specify an outfile here to manually inspect the csv of the processed table. Else just look at out_df, which should have the table as a dataframe too!
+
+# New Readme for using the function
+Fill this in.
+
+# Older Readme
 ### Transforming digitized text into meaningful data.
 [Data Scraper Tech Talk Slides](https://docs.google.com/presentation/d/1sxa5Hi2GYrx1_uY6n696TyaZOA0UDpOAjR0OnclJq70/edit#slide=id.p)
 
